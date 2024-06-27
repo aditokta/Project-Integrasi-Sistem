@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal dan Pengingat Tugas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            margin: 0;
+            flex-grow: 1;
+        }
+        .header-content {
+            display: flex;
+            margin-left: 80px;
+            width: 100%;
+            justify-content: space-between;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .user-info img {
+            border-radius: 50%;
+            width: 50px;
+            height: 40px;
+            margin-left: 10px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="datetime-local"],
+        input[type="submit"] {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        input[type="submit"] {
+            background-color: #333;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        input[type="submit"]:hover {
+            background-color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .delete-btn,
+        .edit-btn {
+            background-color: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: #4CAF50;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Jadwal dan Pengingat Tugas</h1>
+            <div class="user-info">
+                <span>Nama User</span>
+                <img src="profile.png" alt="Profil User">
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <h2>Tambah Tugas Baru</h2>
+        <form id="taskForm">
+            <label for="taskInput">Tugas:</label>
+            <input type="text" id="taskInput" placeholder="Masukkan tugas...">
+            <label for="deadlineInput">Deadline:</label>
+            <input type="datetime-local" id="deadlineInput">
+            <input type="submit" value="Tambah Tugas">
+        </form>
+        <h2>Daftar Tugas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Daftar Tugas</th>
+                    <th>Deadline</th>
+                    <th>Sisa Waktu</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="taskList">
+                <!-- Tugas akan ditampilkan di sini -->
+            </tbody>
+        </table>
+    </div>
+    <!-- Suara alarm -->
+    <audio id="alarmSound">
+        <source src="alarm.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // Fungsi untuk menambahkan tugas baru
+        function addTask(taskInput, deadlineInput) {
+            var taskList = document.getElementById("taskList");
+            var row = taskList.insertRow();
+            var taskCell = row.insertCell(0);
+            var deadlineCell = row.insertCell(1);
+            var timeLeftCell = row.insertCell(2);
+            var actionsCell = row.insertCell(3);
+            var deadline = new Date(deadlineInput);
+
+            taskCell.textContent = taskInput;
+            deadlineCell.textContent = deadlineInput;
+
+            function calculateTimeRemaining() {
+                var now = new Date();
+                var timeRemaining = deadline - now;
+                if (timeRemaining <= 0) {
+                    return "Deadline telah berlalu";
+                } else {
+                    var hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+                    var minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                    var seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+                    return hours + " jam " + minutes + " menit " + seconds + " detik";
+                }
+            }
+
+            function updateRemainingTime() {
+                var timeLeft = calculateTimeRemaining();
+                timeLeftCell.textContent = timeLeft;
+                if (timeLeft === "Deadline telah berlalu") {
+                    // Memainkan suara alarm saat tenggat waktu telah tiba
+                    document.getElementById("alarmSound").play();
+                }
+            }
+
+            // Memanggil fungsi untuk memperbarui waktu tersisa setiap detik
+            var timer = setInterval(updateRemainingTime, 1000);
+
+            // Memastikan waktu tersisa diperbarui saat tugas ditambahkan
+            updateRemainingTime();
+
+            // Tombol Hapus
+            var deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Hapus";
+            deleteBtn.classList.add("delete-btn");
+            deleteBtn.addEventListener("click", function() {
+                row.remove();
+                clearInterval(timer); // Menghentikan interval saat tugas dihapus
+                saveTasks();
+            });
+            actionsCell.appendChild(deleteBtn);
+
+            // Tombol Edit
+            var editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.classList.add("edit-btn");
+            editBtn.addEventListener("click", function() {
+                // Mengisi form dengan data tugas yang akan diedit
+                document.getElementById("taskInput").value = taskCell.textContent;
+                document.getElementById("deadlineInput").value = deadlineCell.textContent;
+                // Menghapus baris tugas yang diedit
+                row.remove();
+                clearInterval(timer);
+                saveTasks();
+            });
+            actionsCell.appendChild(editBtn);
+        }
+
+        // Fungsi untuk menyimpan tugas ke dalam penyimpanan lokal
+        function saveTasks() {
+            var tasks = [];
+            var taskList = document.getElementById("taskList").getElementsByTagName("tr");
+            for (var i = 0; i < taskList.length; i++) {
+                var taskCells = taskList[i].getElementsByTagName("td");
+                var task = {
+                    taskInput: taskCells[0].textContent,
+                    deadlineInput: taskCells[1].textContent
+                };
+                tasks.push(task);
+            }
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        // Fungsi untuk memuat tugas dari penyimpanan lokal
+        function loadTasks() {
+            var tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.forEach(function(task) {
+                addTask(task.taskInput, task.deadlineInput);
+            });
+        }
+
+        document.getElementById("taskForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var taskInput = document.getElementById("taskInput").value;
+            var deadlineInput = document.getElementById("deadlineInput").value;
+            if (taskInput.trim() !== "") {
+                addTask(taskInput, deadlineInput);
+                saveTasks();
+                document.getElementById("taskInput").value = "";
+                document.getElementById("deadlineInput").value = "";
+            } else {
+                alert("Mohon masukkan teks untuk tugas!");
+            }
+        });
+
+        // Memuat tugas saat halaman dimuat
+        loadTasks();
+    </script>
+</body>
+</html>
